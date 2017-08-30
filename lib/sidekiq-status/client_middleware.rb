@@ -46,9 +46,12 @@ module Sidekiq::Status
       return msg['args'].to_a.empty? ? nil : msg['args'].to_json
     end
 
-    def record_initial_status?(worker_class)
-      return true unless worker_class.respond_to?(:record_initial_status?)
-      worker_class.record_initial_status?
+    def record_initial_status?(klass)
+      klass = Object.const_get(klass) if klass.is_a?(String)
+      return true unless klass.respond_to?(:record_initial_status?)
+      klass.record_initial_status?
+    rescue NameError
+      true
     end
   end
 
