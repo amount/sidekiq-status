@@ -38,6 +38,22 @@ describe Sidekiq::Status::ClientMiddleware do
         Sidekiq::Status::ClientMiddleware.new.call(StubJob, {'jid' => SecureRandom.hex}, :queued) do end
       end
     end
+
+    context "when worker_class.record_initial_status? is true" do
+      it 'still records the initial metadata' do
+        jid = VerboseJob.perform_async(:foo => 'bar')
+        expect(Sidekiq::Status.queued?(jid)).to be_truthy
+        expect(Sidekiq::Status.get_all(jid)).not_to be_empty
+      end
+    end
+
+    context "when worker_class.record_initial_status? is false" do
+      it 'does not record the initial metadata' do
+        jid = QuietJob.perform_async(:foo => 'bar')
+        expect(Sidekiq::Status.queued?(jid)).to be_falsey
+        expect(Sidekiq::Status.get_all(jid)).to be_empty
+      end
+    end
   end
 
   describe ":expiration parameter" do
