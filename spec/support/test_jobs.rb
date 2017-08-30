@@ -79,3 +79,15 @@ class RetriedJob < StubJob
     end
   end
 end
+
+class VerboseJob < StubJob
+  def self.record_initial_status?
+    true
+  end
+end
+
+class QuietJob < StubJob
+  def self.record_initial_status?
+    false
+  end
+end
