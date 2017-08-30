@@ -18,13 +18,15 @@ module Sidekiq::Status
     # @param [String] queue the queue's name
     # @param [ConnectionPool] redis_pool optional redis connection pool
     def call(worker_class, msg, queue, redis_pool=nil)
-      initial_metadata = { 
-        jid: msg['jid'],
-        status: :queued,
-        worker: worker_class, 
-        args: display_args(msg, queue)
-      }
-      store_for_id msg['jid'], initial_metadata, @expiration, redis_pool
+      if record_initial_status?(worker_class)
+        initial_metadata = {
+          jid: msg['jid'],
+          status: :queued,
+          worker: worker_class,
+          args: display_args(msg, queue)
+        }
+        store_for_id msg['jid'], initial_metadata, @expiration, redis_pool
+      end
       yield
     end
 
@@ -34,6 +36,11 @@ module Sidekiq::Status
     rescue Exception => e
       # For Sidekiq ~> 2.7
       return msg['args'].to_a.empty? ? nil : msg['args'].to_json
+    end
+
+    def record_initial_status?(worker_class)
+      return true unless worker_class.respond_to?(:record_initial_status?)
+      worker_class.record_initial_status?
     end
   end
 end
