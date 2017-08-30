@@ -111,6 +111,24 @@ It is advised that you set the expiration time greater than the amount of time r
 
 The default expiration time is 30 minutes.
 
+### Disabling recording of the initial :queued status and metadata
+By default, the client middleware records the initial metadata at job-creation.
+If this is not desired for all workers, it can be conditionally enabled
+by setting the `record_initial_status?` method on the worker's eigenclass:
+
+``` ruby
+class MyVerboseJob
+  def self.record_initial_status?
+    true
+  end
+end
+class MyQuietJob
+  def self.record_initial_status?
+    false
+  end
+end
+```
+
 ### Retrieving Status
 
 You may query for job status any time up to expiration:
