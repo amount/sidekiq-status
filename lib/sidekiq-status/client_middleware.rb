@@ -24,7 +24,7 @@ module Sidekiq::Status
       job_class = klass.is_a?(Class) ? klass : Module.const_get(klass)
 
       # Store data if the job is a Sidekiq::Status::Worker
-      if job_class.ancestors.include?(Sidekiq::Status::Worker)
+      if job_class.ancestors.include?(Sidekiq::Status::Worker) && record_initial_status?(worker_class)
         initial_metadata = {
           jid: msg['jid'],
           status: :queued,
@@ -44,6 +44,11 @@ module Sidekiq::Status
     rescue Exception => e
       # For Sidekiq ~> 2.7
       return msg['args'].to_a.empty? ? nil : msg['args'].to_json
+    end
+
+    def record_initial_status?(worker_class)
+      return true unless worker_class.respond_to?(:record_initial_status?)
+      worker_class.record_initial_status?
     end
   end
 
