@@ -38,17 +38,44 @@ describe Sidekiq::Status::ClientMiddleware do
       end
     end
 
+    shared_context "using_sidekiq_batch" do
+      before { Thread.current[:sidekiq_batch] = Object.new }
+      after  { Thread.current[:sidekiq_batch] = nil }
+    end
+
+    context "when using Sidekiq::Batch" do
+      include_context "using_sidekiq_batch"
+
+      let(:jid) { StubJob.perform_async(:foo => 'bar') }
+
+      it 'does not record the initial metadata' do
+        expect(Sidekiq::Status.queued?(jid)).to be_falsey
+        expect(Sidekiq::Status.get_all(jid)).to be_empty
+      end
+    end
+
     context "when worker_class.record_initial_status? is true" do
+      let(:jid) { VerboseJob.perform_async(:foo => 'bar') }
+
       it 'still records the initial metadata' do
-        jid = VerboseJob.perform_async(:foo => 'bar')
         expect(Sidekiq::Status.queued?(jid)).to be_truthy
         expect(Sidekiq::Status.get_all(jid)).not_to be_empty
+      end
+
+      context "when using Sidekiq::Batch" do
+        include_context "using_sidekiq_batch"
+
+        it 'does not record the initial metadata' do
+          expect(Sidekiq::Status.queued?(jid)).to be_falsey
+          expect(Sidekiq::Status.get_all(jid)).to be_empty
+        end
       end
     end
 
     context "when worker_class.record_initial_status? is false" do
+      let(:jid) { QuietJob.perform_async(:foo => 'bar') }
+
       it 'does not record the initial metadata' do
-        jid = QuietJob.perform_async(:foo => 'bar')
         expect(Sidekiq::Status.queued?(jid)).to be_falsey
         expect(Sidekiq::Status.get_all(jid)).to be_empty
       end
