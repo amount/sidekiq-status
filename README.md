@@ -93,8 +93,9 @@ As you noticed you can set expiration time for jobs globally by expiration optio
 
 ### Disabling recording of the initial :queued status and metadata
 By default, the client middleware records the initial metadata at job-creation.
-If this is not desired for all workers, it can be conditionally enabled
-by setting the `record_initial_status?` method on the worker's eigenclass:
+However, this functionality is disabled when using `Sidekiq::Batch`.
+For non-batch jobs, it can be conditionally enabled or disabled
+by setting the `record_initial_status?` method on the worker's singleton class:
 
 ``` ruby
 class MyVerboseJob
