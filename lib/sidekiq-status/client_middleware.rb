@@ -47,11 +47,16 @@ module Sidekiq::Status
     end
 
     def record_initial_status?(klass)
-      klass = Object.const_get(klass) if klass.is_a?(String)
+      return false if Thread.current[:sidekiq_batch]
+      klass = lookup_class(klass) if klass.is_a?(String)
       return true unless klass.respond_to?(:record_initial_status?)
       klass.record_initial_status?
+    end
+
+    def lookup_class(name)
+      Object.const_get(name)
     rescue NameError
-      true
+      nil
     end
   end
 
