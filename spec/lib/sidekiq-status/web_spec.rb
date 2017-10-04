@@ -24,18 +24,6 @@ describe 'sidekiq status web' do
 
   around { |example| start_server(&example) }
 
-  it 'shows the list of jobs in progress' do
-    capture_status_updates(2) do
-      expect(LongJob.perform_async(1)).to eq(job_id)
-    end
-
-    get '/statuses'
-    expect(last_response).to be_ok
-    expect(last_response.body).to match(/#{job_id}/)
-    expect(last_response.body).to match(/LongJob/)
-    expect(last_response.body).to match(/working/)
-  end
-
   it 'shows a single job in progress' do
     capture_status_updates(2) do
       LongJob.perform_async(1, 'another argument')
