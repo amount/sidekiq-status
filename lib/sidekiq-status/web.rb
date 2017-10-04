@@ -1,7 +1,7 @@
 # adapted from https://github.com/cryo28/sidekiq_status
 
 module Sidekiq::Status
-  # Hook into *Sidekiq::Web* Sinatra app which adds a new "/statuses" page
+  # Hook into *Sidekiq::Web* Sinatra app
   module Web
     # Location of Sidekiq::Status::Web view templates
     VIEW_PATH = File.expand_path('../../../web/views', __FILE__)
@@ -67,56 +67,6 @@ module Sidekiq::Status
             'danger'
           end
         end
-
-        def has_sort_by?(value)
-          ["worker", "status", "update_time", "pct_complete", "message", "args"].include?(value)
-        end
-      end
-
-      app.get '/statuses' do
-
-        namespace_jids = Sidekiq.redis{ |conn| conn.keys('sidekiq:status:*') }
-        jids = namespace_jids.map{ |id_namespace| id_namespace.split(':').last }
-        @statuses = []
-
-        jids.each do |jid|
-          status = Sidekiq::Status::get_all jid
-          next if !status || status.count < 2
-          status = add_details_to_status(status)
-          @statuses << status
-        end
-
-        sort_by = has_sort_by?(params[:sort_by]) ? params[:sort_by] : "update_time"
-        sort_dir = "asc"
-
-        if params[:sort_dir] == "asc"
-          @statuses = @statuses.sort { |x,y| (x[sort_by] <=> y[sort_by]) || -1 }
-        else
-          sort_dir = "desc"
-          @statuses = @statuses.sort { |y,x| (x[sort_by] <=> y[sort_by]) || 1 }
-        end
-
-        # Sidekiq pagination
-        @total_size = @statuses.count
-        @count = params[:per_page] ? params[:per_page].to_i : Sidekiq::Status::Web.default_per_page
-        @count = @total_size if params[:per_page] == 'all'
-        @current_page = params[:page].to_i < 1 ? 1 : params[:page].to_i
-        @statuses = @statuses.slice((@current_page - 1) * @count, @count)
-
-        @headers = [
-          {id: "worker", name: "Worker / JID", class: nil, url: nil},
-          {id: "args", name: "Arguments", class: nil, url: nil},
-          {id: "status", name: "Status", class: nil, url: nil},
-          {id: "update_time", name: "Last Updated", class: nil, url: nil},
-          {id: "pct_complete", name: "Progress", class: nil, url: nil},
-        ]
-
-        @headers.each do |h|
-          h[:url] = "statuses?" + params.merge("sort_by" => h[:id], "sort_dir" => (sort_by == h[:id] && sort_dir == "asc") ? "desc" : "asc").map{|k, v| "#{k}=#{CGI.escape v.to_s}"}.join("&")
-          h[:class] = "sorted_#{sort_dir}" if sort_by == h[:id]
-        end
-
-        erb(sidekiq_status_template(:statuses))
       end
 
       app.get '/statuses/:jid' do
@@ -149,12 +99,3 @@ end
 
 require 'sidekiq/web' unless defined?(Sidekiq::Web)
 Sidekiq::Web.register(Sidekiq::Status::Web)
-["per_page", "sort_by", "sort_dir"].each do |key|
-  Sidekiq::WebHelpers::SAFE_QPARAMS.push(key)
-end
-if Sidekiq::Web.tabs.is_a?(Array)
-  # For sidekiq < 2.5
-  Sidekiq::Web.tabs << "statuses"
-else
-  Sidekiq::Web.tabs["Statuses"] = "statuses"
-end
